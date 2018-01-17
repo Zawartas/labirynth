@@ -1,2 +1,2 @@
 # labirynth
-program that searches for exit paths
+Program that searches for exit paths
