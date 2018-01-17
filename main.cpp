@@ -22,8 +22,10 @@ class Matrix{
         bool &operator()(int);
         bool first_path (int, int);
         int xy_z(int x, int y){return x*cls + y;} //na podstawie koordynatow - zwraca numer pola
-        bool BFS (int, int); //parametr to numer pola startowego
-        bool DFS (int, int);
+        int distance(int, int);
+        bool BFS (int, int); //parametr to koordynaty pola startowego
+        bool DFS (int, int); //parametr to numer koordynaty startowego
+        bool GBFS (int, int, int, int); //parametr to numer koordynaty startowego i celu
         bool is_exit(int); //sprawdza czy pole jest obiektem poszukiwanym '2'
         pair<int, int> z_xy(int z){pair<int, int> para (z/cls, z%cls); return para;} //na podstawie numeru pola, zwraca jego koordynaty
     private:
@@ -79,6 +81,18 @@ int main()
                     cout << "\nLength: " << visited.size() << endl;}
             else cout << "There is no path";
             break;
+        case 4:
+            labirynt.BFS(x_start, y_start);
+            int x_finish = visited.front()/labirynt.columns();
+            int y_finish = visited.front()%labirynt.columns();
+            visited.clear();    // czyscimy zeby algorytm mogl ponownie skorzystac z tego wektora
+            algorithm_runs = 0; // j.w.
+            if (labirynt.GBFS(x_start, y_start, x_finish, y_finish) == true){
+                    cout << "Path found.\n";
+                    cout << "Algorithm runs: " << algorithm_runs << endl;
+                    cout << "\nLength: " << visited.size() << endl;}
+            else cout << "There is no path";
+            break;
     }
     cout << endl << labirynt << endl;
 
@@ -125,6 +139,17 @@ int Matrix::columns() const{
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
+int Matrix::distance(int a , int b){
+
+int ax = z_xy(a).first;
+int ay = z_xy(a).second;
+int bx = z_xy(b).first;
+int by = z_xy(b).second;
+
+return sqrt(ax-bx)+sqrt(ay-by);}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
 bool Matrix::is_exit(int z){
             int row = z/cls;
             int column = z%cls;
@@ -141,6 +166,7 @@ algorithm_runs++;
     if (is_exit(z)){
         //odtwarzanie najkrotszej sciezki po poprzednikach '2'
         int start = xy_z(x_start, y_start);
+        visited.push_back(z);
         while (z != start){
                 visited.push_back(poprzednik.find(z)->second);
                 z = visited.back();
@@ -187,6 +213,7 @@ algorithm_runs++;
     if (is_exit(z)){
         //odtwarzanie najkrotszej sciezki po poprzednikach '2'
         int start = xy_z(x_start, y_start);
+        visited.push_back(z);
         while (z != start){
                 visited.push_back(poprzednik.find(z)->second);
                 z = visited.back();
@@ -225,6 +252,8 @@ algorithm_runs++;
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
+vector<tuple<int, int>> kolejka_GBFS;
+
 bool Matrix::GBFS (int x, int y, int Fx, int Fy){ //ten algorytm WIE juz gdzie jest koniec F
 algorithm_runs++;
     int z = xy_z(x, y);
@@ -232,6 +261,7 @@ algorithm_runs++;
     if (is_exit(z)){
         //odtwarzanie najkrotszej sciezki po poprzednikach '2'
         int start = xy_z(x_start, y_start);
+        visited.push_back(z);
         while (z != start){
                 visited.push_back(poprzednik.find(z)->second);
                 z = visited.back();
@@ -241,31 +271,33 @@ algorithm_runs++;
     else if (!is_exit(z)) {
         if (get<0>(plansza[z]) != '1' && get<0>(plansza[z]) != '2')
             get<0>(plansza[z]) = 'x';
-        if (!kolejkaLIFO.empty())
-            kolejkaLIFO.pop_back();
+
+            kolejka_GBFS.clear();
 
         //DODAJEMY SASIADÓW
-            if (get<0>(plansza[z-cls]) != '@' && get<1>(plansza[z-cls]) != true){
-                    get<1>(plansza[z - cls]) = true;
-                    kolejkaLIFO.push_back(z-cls);
+            if (get<0>(plansza[z-cls]) != '@'){
+                  kolejka_GBFS.push_back(make_tuple(z-cls,distance(xy_z(Fx, Fy),z-cls)));
                     poprzednik.insert({z-cls, z});}
-            if (get<0>(plansza[z - 1]) != '@' && get<1>(plansza[z-1]) != true){
-                    get<1>(plansza[z - 1]) = true;
-                    kolejkaLIFO.push_back(z - 1);
+            if (get<0>(plansza[z - 1]) != '@'){
+                 kolejka_GBFS.push_back(make_tuple(z-1,distance(xy_z(Fx, Fy),z-1)));
                     poprzednik.insert({z-1, z});}
-            if (get<0>(plansza[z + 1]) != '@' && get<1>(plansza[z+1]) != true){
-                    get<1>(plansza[z + 1]) = true;
-                    kolejkaLIFO.push_back(z + 1);
+            if (get<0>(plansza[z + 1]) != '@'){
+                  kolejka_GBFS.push_back(make_tuple(z+1,distance(xy_z(Fx, Fy),z+1)));
                     poprzednik.insert({z+1, z});}
-            if (get<0>(plansza[z + cls]) != '@' && get<1>(plansza[z+cls]) != true){
-                    get<1>(plansza[z + cls]) = true;
-                    kolejkaLIFO.push_back(z + cls);
+            if (get<0>(plansza[z + cls]) != '@'){
+                 kolejka_GBFS.push_back(make_tuple(z+cls,distance(xy_z(Fx, Fy),z+cls)));
                     poprzednik.insert({z+cls, z});}}
-    else if (kolejkaLIFO.size() == 0) return false;
+    else if (kolejka_GBFS.size() == 0) return false;
 
-    x = z_xy(kolejkaLIFO.back()).first;
-    y = z_xy(kolejkaLIFO.back()).second;
-    DFS(x, y);
+    sort(kolejka_GBFS.begin(), kolejka_GBFS.end());
+
+    x = z_xy(get<0>(kolejka_GBFS.back()).first);
+    y = z_xy(get<0>(kolejka_GBFS.back()).second;
+
+    for (auto i : kolejka_GBFS)
+        cout << i << " ";
+        cout << endl;
+//    GBFS(x, y);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
