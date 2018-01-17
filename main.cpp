@@ -5,13 +5,11 @@
 #include <tuple>
 #include <algorithm>
 #include <queue>
-#include <utility>
 #include <unordered_map>
 
 using namespace std;
 
-class Matrix
-{
+class Matrix{
     public:
         Matrix();
         Matrix(int rows, int columns);
@@ -22,105 +20,72 @@ class Matrix
         int rows() const;
         int columns() const;
         bool &operator()(int);
-        bool znajdz_pierwsza_sciezke (int, int);
-        bool BFS (int);
-        int xy_z(int x, int y){return x*cls + y;}
-        bool is_exit(int z){
-            int row = z/cls;
-            int column = z%cls;
-            if(get<0>(plansza[row * cls + column])=='2')
-                return 1;
-        return false;}
-        pair<int, int> z_xy(int z){pair<int, int> para (z/cls, z%cls); return para;}
+        bool first_path (int, int);
+        int xy_z(int x, int y){return x*cls + y;} //na podstawie koordynatow - zwraca numer pola
+        bool BFS (int, int); //parametr to numer pola startowego
+        bool DFS (int, int);
+        bool is_exit(int); //sprawdza czy pole jest obiektem poszukiwanym '2'
+        pair<int, int> z_xy(int z){pair<int, int> para (z/cls, z%cls); return para;} //na podstawie numeru pola, zwraca jego koordynaty
     private:
         int rws, cls;
-        vector<tuple <char, bool>> plansza;
+        vector<tuple <char, bool>> plansza; //kazde pole to jakiœ wektor sk³¹dajacy sie ze zmiennej char (co jest w kratce)
+                                            //i bool'a (mowi o tym czy pole bylo odwiedzone czy nie)
 };
 
 ostream &operator <<(ostream& , const Matrix&);
-static int x_start, y_start;
 Matrix wczytaj_plansze(string);
 
-////////////////////////////////////////////////////////////////////////////////////////
-
-static queue<int> kolejka;
+static int x_start, y_start;
+static queue<int> kolejkaFIFO;
+static vector<int> kolejkaLIFO;
 static unordered_map<int, int> poprzednik;
+static vector<int> visited;
+static int algorithm_runs = 0;
 
-static int STOPER = 0;
-
-bool Matrix::BFS (int z){
-    STOPER++;
-
-    if (is_exit(z)){
-        return true;}
-    else {
-        get<1>(plansza[z]) = true;
-        if (!kolejka.empty())
-            kolejka.pop();
-
-        //DODAJEMY SASIADÓW
-            if (get<0>(plansza[z-cls]) != '@' && get<1>(plansza[z-cls]) == false){
-                kolejka.push(z-cls);
-                poprzednik.insert({z-cls, z});}
-            if (get<0>(plansza[z - 1]) != '@' && get<1>(plansza[z-1]) == false){
-                kolejka.push(z - 1);
-                poprzednik.insert({z-1, z});}
-            if (get<0>(plansza[z + 1]) != '@' && get<1>(plansza[z+1]) == false){
-                kolejka.push(z + 1);
-                poprzednik.insert({z+1, z});}
-            if (get<0>(plansza[z + cls]) != '@' && get<1>(plansza[z+cls]) == false){
-                kolejka.push(z + cls);
-                poprzednik.insert({z+cls, z});}}
-
-    BFS(kolejka.front());
-
-    return false;
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////
-    static vector<int> visited;
+////////////////////////////////////////////////////////////////////////////////////////
+
 int main()
 {
-    Matrix matrix1;
+    Matrix labirynt = wczytaj_plansze("labirynth4.txt");
 
-    matrix1 = wczytaj_plansze("labirynth3.txt");
-    cout << endl << matrix1 << endl;
+    cout << endl << labirynt << endl;
 
-    cout << "Which method: (1, 2, 3, 4): ";
+    cout << "Which method: (1 - first_path, 2 - BFS, 3 - DFS, 4 - GBFS, 5 - A*): ";
     int x;
     cin >> x;
+    system("cls");
     switch(x){
         case 1:
-            if (matrix1.znajdz_pierwsza_sciezke(x_start, y_start) == true) {
+            if (labirynt.first_path(x_start, y_start) == true) {
                     cout << "Path found.\n";
-
-                    for (auto i: visited)
-                        cout << i << " ";
+                    cout << "Algorithm runs: " << algorithm_runs << endl;
                     cout << "\nLength: " << visited.size() << endl;}
             else cout << "There is no path";
 
             break;
         case 2:
-            matrix1.BFS(matrix1.xy_z(x_start, y_start));
-            x = 471;
-            while (x != 487){
-                visited.push_back(poprzednik.find(x)->second);
-                x = visited.back();
-                }
-
-            for (auto i: visited){
-                        cout << i << " ";
-                        int x = matrix1.z_xy(i).first;
-                        int y = matrix1.z_xy(i).second;
-                        matrix1(x, y) = '-';}
-                        cout << "\nLength: " << visited.size() << endl;
+            if (labirynt.BFS(x_start, y_start) == true){
+                    cout << "Path found.\n";
+                    cout << "Algorithm runs: " << algorithm_runs << endl;
+                    cout << "\nLength: " << visited.size() << endl;}
+            else cout << "There is no path";
+            break;
+        case 3:
+            if (labirynt.DFS(x_start, y_start) == true){
+                    cout << "Path found.\n";
+                    cout << "Algorithm runs: " << algorithm_runs << endl;
+                    cout << "\nLength: " << visited.size() << endl;}
+            else cout << "There is no path";
             break;
     }
-    cout << endl << matrix1 << endl;
+    cout << endl << labirynt << endl;
 
     return 0;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////
 
 ostream &operator <<(ostream &stream, const Matrix &matrix){
@@ -145,28 +110,168 @@ Matrix &Matrix::operator =(const Matrix &matrix){
 char &Matrix::operator()(int row, int column){
     return get<0>(plansza[row * cls + column]) ;}
 
-const char &Matrix::operator()(int row, int column) const
-{
+const char &Matrix::operator()(int row, int column) const{
     return get<0>(plansza[row * cls + column]);
 }
-int Matrix::rows() const
-{
+bool &Matrix::operator()(int value){
+    return get<1>(plansza[value]);
+}
+int Matrix::rows() const{
     return rws;
 }
-int Matrix::columns() const
-{
+int Matrix::columns() const{
     return cls;
-}
-
-bool &Matrix::operator()(int value){
-
-    return get<1>(plansza[value]);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
-bool Matrix::znajdz_pierwsza_sciezke (int i, int j){
-    STOPER++;
+bool Matrix::is_exit(int z){
+            int row = z/cls;
+            int column = z%cls;
+            if(get<0>(plansza[row * cls + column])=='2')
+                return true;
+        return false;}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+bool Matrix::BFS (int x, int y){
+algorithm_runs++;
+    int z = xy_z(x, y);
+
+    if (is_exit(z)){
+        //odtwarzanie najkrotszej sciezki po poprzednikach '2'
+        int start = xy_z(x_start, y_start);
+        while (z != start){
+                visited.push_back(poprzednik.find(z)->second);
+                z = visited.back();
+                if(get<0>(plansza[z]) != '1')
+                    get<0>(plansza[z]) = '-';}
+    return true;}
+
+    else if (!is_exit(z)){
+        if (get<0>(plansza[z]) != '1' && get<0>(plansza[z]) != '2')
+            get<0>(plansza[z]) = 'x';
+        if (!kolejkaFIFO.empty())
+            kolejkaFIFO.pop();
+
+        //DODAJEMY SASIADÓW
+            if (get<0>(plansza[z-cls]) != '@' && get<1>(plansza[z-cls]) != true){
+                    get<1>(plansza[z-cls]) = true;
+                    kolejkaFIFO.push(z-cls);
+                    poprzednik.insert({z-cls, z});}
+            if (get<0>(plansza[z - 1]) != '@' && get<1>(plansza[z-1]) != true){
+                    get<1>(plansza[z-1]) = true;
+                    kolejkaFIFO.push(z - 1);
+                    poprzednik.insert({z-1, z});}
+            if (get<0>(plansza[z + 1]) != '@' && get<1>(plansza[z+1]) != true){
+                    get<1>(plansza[z+1]) = true;
+                    kolejkaFIFO.push(z + 1);
+                    poprzednik.insert({z+1, z});}
+            if (get<0>(plansza[z + cls]) != '@' && get<1>(plansza[z+cls]) != true){
+                    get<1>(plansza[z+cls]) = true;
+                    kolejkaFIFO.push(z + cls);
+                    poprzednik.insert({z+cls, z});}                }
+    else if (kolejkaFIFO.size() == 0) return false;
+
+    x = z_xy(kolejkaFIFO.front()).first;
+    y = z_xy(kolejkaFIFO.front()).second;
+    BFS(x, y);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+bool Matrix::DFS (int x, int y){
+algorithm_runs++;
+    int z = xy_z(x, y);
+
+    if (is_exit(z)){
+        //odtwarzanie najkrotszej sciezki po poprzednikach '2'
+        int start = xy_z(x_start, y_start);
+        while (z != start){
+                visited.push_back(poprzednik.find(z)->second);
+                z = visited.back();
+                if(get<0>(plansza[z]) != '1')
+                    get<0>(plansza[z]) = '-';}
+        return true;}
+    else if (!is_exit(z)) {
+        if (get<0>(plansza[z]) != '1' && get<0>(plansza[z]) != '2')
+            get<0>(plansza[z]) = 'x';
+        if (!kolejkaLIFO.empty())
+            kolejkaLIFO.pop_back();
+
+        //DODAJEMY SASIADÓW
+            if (get<0>(plansza[z-cls]) != '@' && get<1>(plansza[z-cls]) != true){
+                    get<1>(plansza[z - cls]) = true;
+                    kolejkaLIFO.push_back(z-cls);
+                    poprzednik.insert({z-cls, z});}
+            if (get<0>(plansza[z - 1]) != '@' && get<1>(plansza[z-1]) != true){
+                    get<1>(plansza[z - 1]) = true;
+                    kolejkaLIFO.push_back(z - 1);
+                    poprzednik.insert({z-1, z});}
+            if (get<0>(plansza[z + 1]) != '@' && get<1>(plansza[z+1]) != true){
+                    get<1>(plansza[z + 1]) = true;
+                    kolejkaLIFO.push_back(z + 1);
+                    poprzednik.insert({z+1, z});}
+            if (get<0>(plansza[z + cls]) != '@' && get<1>(plansza[z+cls]) != true){
+                    get<1>(plansza[z + cls]) = true;
+                    kolejkaLIFO.push_back(z + cls);
+                    poprzednik.insert({z+cls, z});}}
+    else if (kolejkaLIFO.size() == 0) return false;
+
+    x = z_xy(kolejkaLIFO.back()).first;
+    y = z_xy(kolejkaLIFO.back()).second;
+    DFS(x, y);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+bool Matrix::GBFS (int x, int y, int Fx, int Fy){ //ten algorytm WIE juz gdzie jest koniec F
+algorithm_runs++;
+    int z = xy_z(x, y);
+
+    if (is_exit(z)){
+        //odtwarzanie najkrotszej sciezki po poprzednikach '2'
+        int start = xy_z(x_start, y_start);
+        while (z != start){
+                visited.push_back(poprzednik.find(z)->second);
+                z = visited.back();
+                if(get<0>(plansza[z]) != '1')
+                    get<0>(plansza[z]) = '-';}
+        return true;}
+    else if (!is_exit(z)) {
+        if (get<0>(plansza[z]) != '1' && get<0>(plansza[z]) != '2')
+            get<0>(plansza[z]) = 'x';
+        if (!kolejkaLIFO.empty())
+            kolejkaLIFO.pop_back();
+
+        //DODAJEMY SASIADÓW
+            if (get<0>(plansza[z-cls]) != '@' && get<1>(plansza[z-cls]) != true){
+                    get<1>(plansza[z - cls]) = true;
+                    kolejkaLIFO.push_back(z-cls);
+                    poprzednik.insert({z-cls, z});}
+            if (get<0>(plansza[z - 1]) != '@' && get<1>(plansza[z-1]) != true){
+                    get<1>(plansza[z - 1]) = true;
+                    kolejkaLIFO.push_back(z - 1);
+                    poprzednik.insert({z-1, z});}
+            if (get<0>(plansza[z + 1]) != '@' && get<1>(plansza[z+1]) != true){
+                    get<1>(plansza[z + 1]) = true;
+                    kolejkaLIFO.push_back(z + 1);
+                    poprzednik.insert({z+1, z});}
+            if (get<0>(plansza[z + cls]) != '@' && get<1>(plansza[z+cls]) != true){
+                    get<1>(plansza[z + cls]) = true;
+                    kolejkaLIFO.push_back(z + cls);
+                    poprzednik.insert({z+cls, z});}}
+    else if (kolejkaLIFO.size() == 0) return false;
+
+    x = z_xy(kolejkaLIFO.back()).first;
+    y = z_xy(kolejkaLIFO.back()).second;
+    DFS(x, y);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+bool Matrix::first_path (int i, int j){
+algorithm_runs++;
     if (get<0>(plansza[i * cls + j]) == '2'){
         get<0>(plansza[x_start * cls + y_start]) = '1';
         return true;}
@@ -175,21 +280,20 @@ bool Matrix::znajdz_pierwsza_sciezke (int i, int j){
     get<0>(plansza[i * cls + j]) = '-';
     visited.push_back(i * cls + j);
 
-    if (znajdz_pierwsza_sciezke(i-1, j) == true){
+    if (first_path(i-1, j) == true){
         return true;}
-    if (znajdz_pierwsza_sciezke(i, j+1) == true){
+    if (first_path(i, j+1) == true){
         return true;}
-    if (znajdz_pierwsza_sciezke(i+1, j) == true){
+    if (first_path(i+1, j) == true){
         return true;}
-    if (znajdz_pierwsza_sciezke(i, j-1) == true){
+    if (first_path(i, j-1) == true){
         return true;}
     get<0>(plansza[i * cls + j]) = 'x';
     visited.pop_back();
     return false;
 }
 
-
-
+////////////////////////////////////////////////////////////////////////////////////////
 
 Matrix wczytaj_plansze(string x){
 
@@ -210,11 +314,11 @@ Matrix wczytaj_plansze(string x){
     Matrix matrix1(x1, y1);
 
     plansza.open(x);
-
+    int k = 0;
     for (int i = 0; i < x1; ++i){
         for (int j = 0; j < y1; ++j){
                 plansza.get(znak);
-
+                matrix1(k++) = false;
                 if (znak == '\n' && j == 0){
                     --j; continue;}
                 else if (znak == '\n' || plansza.eof()){
@@ -235,6 +339,7 @@ Matrix wczytaj_plansze(string x){
                     matrix1(i, j) = '2';
         }
     }
+
     plansza.close();
     return matrix1;
 }
