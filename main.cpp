@@ -38,6 +38,7 @@ ostream &operator <<(ostream& , const Matrix&);
 Matrix wczytaj_plansze(string);
 
 static int x_start, y_start;
+static int x_finish, y_finish;
 static queue<int> kolejkaFIFO;
 static vector<int> kolejkaLIFO;
 static unordered_map<int, int> poprzednik;
@@ -50,11 +51,11 @@ static int algorithm_runs = 0;
 
 int main()
 {
-    Matrix labirynt = wczytaj_plansze("labirynth4.txt");
+    Matrix labirynt = wczytaj_plansze("labirynth3.txt");
 
     cout << endl << labirynt << endl;
 
-    cout << "Which method: (1 - first_path, 2 - BFS, 3 - DFS, 4 - GBFS, 5 - A*): ";
+    cout << "Path finding method: (1 - first_path, 2 - BFS, 3 - DFS, 4 - GBFS): ";
     int x;
     cin >> x;
     system("cls");
@@ -62,7 +63,7 @@ int main()
         case 1:
             if (labirynt.first_path(x_start, y_start) == true) {
                     cout << "Path found.\n";
-                    cout << "Algorithm runs: " << algorithm_runs << endl;
+                    cout << "Algorithm runs: " << algorithm_runs;
                     cout << "\nLength: " << visited.size() << endl;}
             else cout << "There is no path";
 
@@ -70,26 +71,27 @@ int main()
         case 2:
             if (labirynt.BFS(x_start, y_start) == true){
                     cout << "Path found.\n";
-                    cout << "Algorithm runs: " << algorithm_runs << endl;
+                    cout << "Algorithm runs: " << algorithm_runs;
                     cout << "\nLength: " << visited.size() << endl;}
             else cout << "There is no path";
             break;
         case 3:
             if (labirynt.DFS(x_start, y_start) == true){
                     cout << "Path found.\n";
-                    cout << "Algorithm runs: " << algorithm_runs << endl;
+                    cout << "Algorithm runs: " << algorithm_runs;
                     cout << "\nLength: " << visited.size() << endl;}
             else cout << "There is no path";
             break;
         case 4:
             labirynt.BFS(x_start, y_start);
-            int x_finish = visited.front()/labirynt.columns();
-            int y_finish = visited.front()%labirynt.columns();
+            x_finish = visited.front()/labirynt.columns();
+            y_finish = visited.front()%labirynt.columns();
             visited.clear();    // czyscimy zeby algorytm mogl ponownie skorzystac z tego wektora
             algorithm_runs = 0; // j.w.
+            labirynt = wczytaj_plansze("labirynth3.txt");
             if (labirynt.GBFS(x_start, y_start, x_finish, y_finish) == true){
                     cout << "Path found.\n";
-                    cout << "Algorithm runs: " << algorithm_runs << endl;
+                    cout << "Algorithm runs: " << algorithm_runs;
                     cout << "\nLength: " << visited.size() << endl;}
             else cout << "There is no path";
             break;
@@ -136,17 +138,6 @@ int Matrix::rows() const{
 int Matrix::columns() const{
     return cls;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////
-
-int Matrix::distance(int a , int b){
-
-int ax = z_xy(a).first;
-int ay = z_xy(a).second;
-int bx = z_xy(b).first;
-int by = z_xy(b).second;
-
-return sqrt(ax-bx)+sqrt(ay-by);}
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -249,13 +240,29 @@ algorithm_runs++;
     y = z_xy(kolejkaLIFO.back()).second;
     DFS(x, y);
 }
-
 ////////////////////////////////////////////////////////////////////////////////////////
 
 vector<tuple<int, int>> kolejka_GBFS;
+bool operator < (tuple<int, int> a, tuple <int, int> b){
+return get<1>(a) < get<1>(b);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+int Matrix::distance(int a , int b){
+
+int ax = a/cls;
+int ay = a%cls;
+int bx = b/cls;
+int by = b%cls;
+
+return sqrt((ax-bx)*(ax-bx))+sqrt((ay-by)*(ay-by));}
+
+////////////////////////////////////////////////////////////////////////////////////////
 
 bool Matrix::GBFS (int x, int y, int Fx, int Fy){ //ten algorytm WIE juz gdzie jest koniec F
 algorithm_runs++;
+
     int z = xy_z(x, y);
 
     if (is_exit(z)){
@@ -271,33 +278,37 @@ algorithm_runs++;
     else if (!is_exit(z)) {
         if (get<0>(plansza[z]) != '1' && get<0>(plansza[z]) != '2')
             get<0>(plansza[z]) = 'x';
-
-            kolejka_GBFS.clear();
+            if (!kolejka_GBFS.empty())
+                kolejka_GBFS.pop_back();
 
         //DODAJEMY SASIADÓW
-            if (get<0>(plansza[z-cls]) != '@'){
-                  kolejka_GBFS.push_back(make_tuple(z-cls,distance(xy_z(Fx, Fy),z-cls)));
+            if (get<0>(plansza[z-cls]) != '@' && get<0>(plansza[z-cls]) != '1' && get<1>(plansza[z-cls]) != true){
+                    kolejka_GBFS.push_back(make_tuple(z-cls,distance(xy_z(Fx, Fy),z-cls)));
+                    get<1>(plansza[z-cls]) = true;
                     poprzednik.insert({z-cls, z});}
-            if (get<0>(plansza[z - 1]) != '@'){
-                 kolejka_GBFS.push_back(make_tuple(z-1,distance(xy_z(Fx, Fy),z-1)));
+            if (get<0>(plansza[z - 1]) != '@' && get<0>(plansza[z-cls]) != '1' && get<1>(plansza[z-1]) != true){
+                    kolejka_GBFS.push_back(make_tuple(z-1,distance(xy_z(Fx, Fy),z-1)));
+                    get<1>(plansza[z-1]) = true;
                     poprzednik.insert({z-1, z});}
-            if (get<0>(plansza[z + 1]) != '@'){
-                  kolejka_GBFS.push_back(make_tuple(z+1,distance(xy_z(Fx, Fy),z+1)));
+            if (get<0>(plansza[z + 1]) != '@' && get<0>(plansza[z-cls]) != '1' && get<1>(plansza[z+1]) != true){
+                    kolejka_GBFS.push_back(make_tuple(z+1,distance(xy_z(Fx, Fy),z+1)));
+                    get<1>(plansza[z + 1]) = true;
                     poprzednik.insert({z+1, z});}
-            if (get<0>(plansza[z + cls]) != '@'){
-                 kolejka_GBFS.push_back(make_tuple(z+cls,distance(xy_z(Fx, Fy),z+cls)));
+            if (get<0>(plansza[z + cls]) != '@' && get<0>(plansza[z-cls]) != '1' && get<1>(plansza[z+cls]) != true){
+                    kolejka_GBFS.push_back(make_tuple(z+cls,distance(xy_z(Fx, Fy),z+cls)));
+                    get<1>(plansza[z + cls]) = true;
                     poprzednik.insert({z+cls, z});}}
     else if (kolejka_GBFS.size() == 0) return false;
 
     sort(kolejka_GBFS.begin(), kolejka_GBFS.end());
+    reverse(kolejka_GBFS.begin(), kolejka_GBFS.end());
 
-    x = z_xy(get<0>(kolejka_GBFS.back()).first);
-    y = z_xy(get<0>(kolejka_GBFS.back()).second;
+    for (vector<tuple<int, int>>::iterator it = kolejka_GBFS.begin(); it != kolejka_GBFS.end(); it++)
 
-    for (auto i : kolejka_GBFS)
-        cout << i << " ";
-        cout << endl;
-//    GBFS(x, y);
+    x = z_xy(get<0>(kolejka_GBFS.back())).first;
+    y = z_xy(get<0>(kolejka_GBFS.back())).second;
+
+    GBFS(x, y, x_finish, y_finish);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
