@@ -51,7 +51,9 @@ static int algorithm_runs = 0;
 
 int main()
 {
-    Matrix labirynt = wczytaj_plansze("labirynth3.txt");
+    //TUTAJ PODAJEMY NAZWE PLIKU
+    char *plik = "labirynth3.txt";
+    Matrix labirynt = wczytaj_plansze(plik);
 
     cout << endl << labirynt << endl;
 
@@ -83,12 +85,13 @@ int main()
             else cout << "There is no path";
             break;
         case 4:
+            // tutaj najpierw musimy znalezc '2'
             labirynt.BFS(x_start, y_start);
             x_finish = visited.front()/labirynt.columns();
             y_finish = visited.front()%labirynt.columns();
             visited.clear();    // czyscimy zeby algorytm mogl ponownie skorzystac z tego wektora
             algorithm_runs = 0; // j.w.
-            labirynt = wczytaj_plansze("labirynth3.txt");
+            labirynt = wczytaj_plansze(plik);
             if (labirynt.GBFS(x_start, y_start, x_finish, y_finish) == true){
                     cout << "Path found.\n";
                     cout << "Algorithm runs: " << algorithm_runs;
@@ -303,7 +306,7 @@ algorithm_runs++;
     sort(kolejka_GBFS.begin(), kolejka_GBFS.end());
     reverse(kolejka_GBFS.begin(), kolejka_GBFS.end());
 
-    for (vector<tuple<int, int>>::iterator it = kolejka_GBFS.begin(); it != kolejka_GBFS.end(); it++)
+    //for (vector<tuple<int, int>>::iterator it = kolejka_GBFS.begin(); it != kolejka_GBFS.end(); it++)
 
     x = z_xy(get<0>(kolejka_GBFS.back())).first;
     y = z_xy(get<0>(kolejka_GBFS.back())).second;
