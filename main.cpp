@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 using namespace std;
+typedef tuple<char, bool> parametry_pola;
 
 class Matrix{
     public:
@@ -30,7 +31,7 @@ class Matrix{
         pair<int, int> z_xy(int z){pair<int, int> para (z/cls, z%cls); return para;} //na podstawie numeru pola, zwraca jego koordynaty
     private:
         int rws, cls;
-        vector<tuple <char, bool>> plansza; //kazde pole to jakiœ wektor sk³¹dajacy sie ze zmiennej char (co jest w kratce)
+        vector<parametry_pola> plansza; //kazde pole to jakiœ wektor sk³¹dajacy sie ze zmiennej char (co jest w kratce)
                                             //i bool'a (mowi o tym czy pole bylo odwiedzone czy nie)
 };
 
@@ -52,7 +53,7 @@ static int algorithm_runs = 0;
 int main()
 {
     //TUTAJ PODAJEMY NAZWE PLIKU
-    char *plik = "labirynth3.txt";
+    char *plik = "labirynth2.txt";
     Matrix labirynt = wczytaj_plansze(plik);
 
     cout << endl << labirynt << endl;
@@ -162,7 +163,7 @@ algorithm_runs++;
         int start = xy_z(x_start, y_start);
         visited.push_back(z);
         while (z != start){
-                visited.push_back(poprzednik.find(z)->second);
+                visited.push_back(poprzednik[z]);
                 z = visited.back();
                 if(get<0>(plansza[z]) != '1')
                     get<0>(plansza[z]) = '-';}
@@ -245,10 +246,7 @@ algorithm_runs++;
 }
 ////////////////////////////////////////////////////////////////////////////////////////
 
-vector<tuple<int, int>> kolejka_GBFS;
-bool operator < (tuple<int, int> a, tuple <int, int> b){
-return get<1>(a) < get<1>(b);
-}
+vector<pair<int, int>> kolejka_GBFS;
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -286,30 +284,31 @@ algorithm_runs++;
 
         //DODAJEMY SASIADÓW
             if (get<0>(plansza[z-cls]) != '@' && get<0>(plansza[z-cls]) != '1' && get<1>(plansza[z-cls]) != true){
-                    kolejka_GBFS.push_back(make_tuple(z-cls,distance(xy_z(Fx, Fy),z-cls)));
+                    kolejka_GBFS.push_back(make_pair(distance(xy_z(Fx, Fy),z-cls), z-cls));
                     get<1>(plansza[z-cls]) = true;
                     poprzednik.insert({z-cls, z});}
-            if (get<0>(plansza[z - 1]) != '@' && get<0>(plansza[z-cls]) != '1' && get<1>(plansza[z-1]) != true){
-                    kolejka_GBFS.push_back(make_tuple(z-1,distance(xy_z(Fx, Fy),z-1)));
+            if (get<0>(plansza[z-1]) != '@' && get<0>(plansza[z-1]) != '1' && get<1>(plansza[z-1]) != true){
+                    kolejka_GBFS.push_back(make_pair(distance(xy_z(Fx, Fy),z-1), z-1));
                     get<1>(plansza[z-1]) = true;
                     poprzednik.insert({z-1, z});}
-            if (get<0>(plansza[z + 1]) != '@' && get<0>(plansza[z-cls]) != '1' && get<1>(plansza[z+1]) != true){
-                    kolejka_GBFS.push_back(make_tuple(z+1,distance(xy_z(Fx, Fy),z+1)));
-                    get<1>(plansza[z + 1]) = true;
+            if (get<0>(plansza[z+1]) != '@' && get<0>(plansza[z+1]) != '1' && get<1>(plansza[z+1]) != true){
+                    kolejka_GBFS.push_back(make_pair(distance(xy_z(Fx, Fy),z+1), z+1));
+                    get<1>(plansza[z+1]) = true;
                     poprzednik.insert({z+1, z});}
-            if (get<0>(plansza[z + cls]) != '@' && get<0>(plansza[z-cls]) != '1' && get<1>(plansza[z+cls]) != true){
-                    kolejka_GBFS.push_back(make_tuple(z+cls,distance(xy_z(Fx, Fy),z+cls)));
-                    get<1>(plansza[z + cls]) = true;
+            if (get<0>(plansza[z+cls]) != '@' && get<0>(plansza[z+cls]) != '1' && get<1>(plansza[z+cls]) != true){
+                    kolejka_GBFS.push_back(make_pair(distance(xy_z(Fx, Fy),z+cls), z+cls));
+                    get<1>(plansza[z+cls]) = true;
                     poprzednik.insert({z+cls, z});}}
     else if (kolejka_GBFS.size() == 0) return false;
 
     sort(kolejka_GBFS.begin(), kolejka_GBFS.end());
     reverse(kolejka_GBFS.begin(), kolejka_GBFS.end());
 
-    //for (vector<tuple<int, int>>::iterator it = kolejka_GBFS.begin(); it != kolejka_GBFS.end(); it++)
+//    for (vector<tuple<int, int>>::iterator it = kolejka_GBFS.end() - 4; it != kolejka_GBFS.end(); it++)
+//        cout << "pole nr: " << get<0>(kolejka_GBFS.back())<< " odleglosc: "<<get<1>(kolejka_GBFS.back()) << " ";
 
-    x = z_xy(get<0>(kolejka_GBFS.back())).first;
-    y = z_xy(get<0>(kolejka_GBFS.back())).second;
+    x = z_xy(get<1>(kolejka_GBFS.back())).first;
+    y = z_xy(get<1>(kolejka_GBFS.back())).second;
 
     GBFS(x, y, x_finish, y_finish);
 }
